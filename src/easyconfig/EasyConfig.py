@@ -27,7 +27,7 @@ from PyQt5.QtWidgets import (
     QAbstractItemView,
     QScrollArea,
     QHeaderView,
-    QTextEdit, QSlider, QStyle,
+    QTextEdit, QSlider, QStyle,QListWidget,QFrame
 )
 
 
@@ -99,8 +99,6 @@ class EasyConfig:
             def get_valid(self):
                 return self.get_common()
 
-
-
             def return_pressed(self):
                 self.setStyleSheet("color: black")
                 if self.get_value() != self.prev_value:
@@ -145,6 +143,27 @@ class EasyConfig:
 
             def get_name(self):
                 return self.name
+
+        class List(InteractorWidget):
+
+            def add_specific(self, value):
+                self.ed = QListWidget()
+#                self.ed.setEditable(False)
+                #self.ed.currentIndexChanged.connect(lambda: self.value_changed.emit())
+                self.ed.addItems(self.kwargs.get("items", []))
+                self.layout.addWidget(self.ed)
+                self.ed.setMaximumHeight(self.kwargs.get("height", 100))
+                #self.ed.setStyleSheet("QListWidget { background-color: transparent; }")
+                #self.ed.setStyleSheet("QListWidget { border: 1px solid lightgray; }")
+                #if not self.kwargs.get("frame", True):
+                    #self.ed.setFrameStyle(QFrame.Box | QFrame.Plain)
+
+            def get_valid(self):
+                return self.get_common().union(["items", "height", "frame"])
+
+            def set_value(self, value):
+                self.ed.clear()
+                self.ed.addItems(value)
 
         class EditBox(String):
 
@@ -552,6 +571,7 @@ class EasyConfig:
         def addString(self, name, **kwargs):
             return self.add(name, EasyConfig.Elem.Kind.STR, **kwargs)
 
+
         def addList(self, name, **kwargs):
             return self.add(name, EasyConfig.Elem.Kind.LIST, **kwargs)
 
@@ -634,6 +654,8 @@ class EasyConfig:
             elif e.kind == EasyConfig.Elem.Kind.EDITBOX:
                 self.w = EasyConfig.ConfigWidget.EditBox(e.key, e.value, **e.kwargs)
                 self.w.set_value(e.value)
+            elif e.kind == EasyConfig.Elem.Kind.LIST:
+                self.w = EasyConfig.ConfigWidget.List(e.key, e.value, **e.kwargs)
             else:
                 self.w = EasyConfig.ConfigWidget.String(e.key, e.value, **e.kwargs)
 
@@ -740,7 +762,7 @@ class EasyConfig:
 
     def get_widget(self):
         dialog = self.ConfigWidget(self.root_node)
-        dialog.bb.setVisible(False)
+        #dialog.bb.setVisible(False)
         if self.expanded:
             dialog.set_expanded(self.expanded)
         return dialog
@@ -894,8 +916,8 @@ class MainWindow(QPushButton):
         first_level.addLabel("Label", pretty="One label", default="hola",save=False)
         first_level.addString("string", pretty="One string", save=False, callback=lambda x,y: print("cbcbc ",x,y), editable=True)
         first_level.addInt("int", pretty="One int", default=27)
+        self.lis = first_level.addList("list", pretty="One list", items=["a", "b", "c"])
         first_level.addFloat("float", pretty="One float", default=28)
-
         second_level = first_level.addSubSection("second_level", pretty="Second Level", editable=True)
         second_level.addCombobox("Combo", pretty="One combobox", items=["a", "b", "c"], callback=lambda x,y: print("hhh",x,y))
         second_level.addFile("load_file", pretty="One file", extension="jpg")
@@ -925,8 +947,9 @@ class MainWindow(QPushButton):
         # self.c.set("/minollo/minolli/hdhdh", 6, create=True)
 
         def do():
-            print(self.c.get("string"), self.c.get("int"))
-            self.c.set("int", self.c.get("int") + 1)
+            #print(self.c.get("string"), self.c.get("int"))
+            #self.c.set("int", self.c.get("int") + 1)
+            self.lis.set_value(["a", "d"])
 
         self.qt = QTimer()
         self.qt.timeout.connect(do)
