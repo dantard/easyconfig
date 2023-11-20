@@ -1,5 +1,6 @@
 import base64
 import sys
+import traceback
 from enum import Enum
 
 import yaml
@@ -27,7 +28,7 @@ from PyQt5.QtWidgets import (
     QAbstractItemView,
     QScrollArea,
     QHeaderView,
-    QTextEdit, QSlider, QStyle,QListWidget,QFrame
+    QTextEdit, QSlider, QStyle, QListWidget, QFrame, QInputDialog
 )
 
 
@@ -74,12 +75,20 @@ class EasyConfig:
                 self.setFocusPolicy(Qt.TabFocus)
                 ql.setAlignment(Qt.AlignLeft)
                 self.ed = None
+                self.emit_cb = True
                 self.add_specific(value)
+
+            def set_emit_callback(self, value):
+                self.emit_cb = value
+
+            def update(self, **kwargs) -> None:
+                pass
 
             def get_valid(self):
                 return self.get_common()
+
             def get_common(self):
-                return  set(["default", "save", "fmt", "pretty", "callback", "editable"])
+                return set(["default", "save", "fmt", "pretty", "callback", "editable"])
 
             def check_kwargs(self):
                 for arg in self.kwargs:
@@ -87,13 +96,12 @@ class EasyConfig:
                         print("Parameter", arg, "not valid for ", type(self))
                         return False
                 return True
-
         class String(InteractorWidget):
 
             def __init__(self, name, value, **kwargs):
                 super().__init__(name, value, **kwargs)
                 self.prev_value = value
-                print("name", name, kwargs)
+                # print("name", name, kwargs)
                 self.ed.setReadOnly(not self.kwargs.get('editable', True))
 
             def get_valid(self):
@@ -144,19 +152,45 @@ class EasyConfig:
             def get_name(self):
                 return self.name
 
+        class DoubleLabel(InteractorWidget):
+            def add_specific(self, value):
+                self.ed = QLabel()
+                fmt = self.kwargs.get("fmt", "{}")
+                if value is not None and value[0] is not None:
+                    self.ed.setText(fmt.format(value[0]))
+
+                self.ed2 = QLabel()
+                layout = QHBoxLayout()
+                layout.addWidget(self.ed)
+                layout.addWidget(self.ed2)
+
+                self.layout.addLayout(layout)
+                if value is not None and value[1] is not None:
+                    self.ed2.setText(fmt.format(value[1]))
+
+            def set_value(self, value):
+                if value is not None:
+                    if value[0] is not None:
+                        self.ed.setText(str(value[0]))
+                    if value[1] is not None:
+                        self.ed2.setText(str(value[1]))
+
+
+
         class List(InteractorWidget):
 
             def add_specific(self, value):
                 self.ed = QListWidget()
-#                self.ed.setEditable(False)
-                #self.ed.currentIndexChanged.connect(lambda: self.value_changed.emit())
+                #                self.ed.setEditable(False)
+                # self.ed.currentIndexChanged.connect(lambda: self.value_changed.emit())
                 self.ed.addItems(self.kwargs.get("items", []))
                 self.layout.addWidget(self.ed)
                 self.ed.setMaximumHeight(self.kwargs.get("height", 100))
-                #self.ed.setStyleSheet("QListWidget { background-color: transparent; }")
-                #self.ed.setStyleSheet("QListWidget { border: 1px solid lightgray; }")
-                #if not self.kwargs.get("frame", True):
-                    #self.ed.setFrameStyle(QFrame.Box | QFrame.Plain)
+                self.ed.setFont(QFont("Courier New", 10))
+                # self.ed.setStyleSheet("QListWidget { background-color: transparent; }")
+                # self.ed.setStyleSheet("QListWidget { border: 1px solid lightgray; }")
+                # if not self.kwargs.get("frame", True):
+                # self.ed.setFrameStyle(QFrame.Box | QFrame.Plain)
 
             def get_valid(self):
                 return self.get_common().union(["items", "height", "frame"])
@@ -164,6 +198,15 @@ class EasyConfig:
             def set_value(self, value):
                 self.ed.clear()
                 self.ed.addItems(value)
+
+            def update(self, **kwargs) -> None:
+                if "items" in kwargs:
+                    self.ed.clear()
+                    self.ed.addItems(kwargs["items"])
+
+                if "on_selection" in kwargs:
+                    self.ed: QListWidget
+                    self.ed.doubleClicked.connect(kwargs["on_selection"])
 
         class EditBox(String):
 
@@ -217,12 +260,27 @@ class EasyConfig:
 
         class ComboBox(InteractorWidget):
 
+            class MyComboBox(QComboBox):
+                def wheelEvent(self, e: QtGui.QWheelEvent) -> None:
+                    e.ignore()
+
             def add_specific(self, value):
-                self.cb = QComboBox()
+                self.cb = self.MyComboBox()
                 self.cb.currentIndexChanged.connect(lambda: self.value_changed.emit())
                 self.cb.addItems(self.kwargs.get("items", []))
+                self.cb.setEditable(self.kwargs.get("editable", False))
                 self.layout.addWidget(self.cb, stretch=2)
                 self.cb.setCurrentIndex(value if value is not None else 0)
+
+
+
+            def update(self, **kwargs):
+                items = kwargs.get("append")
+                if items is not None:
+                    self.cb.addItems(items)
+                color = kwargs.get("color")
+                if color is not None:
+                    self.cb.setStyleSheet("QComboBox { color: %s }" % color)
 
             def get_valid(self):
                 return self.get_common().union(["items"])
@@ -234,7 +292,10 @@ class EasyConfig:
                 return self.cb.currentIndex() if self.cb.currentText() != "" else None
 
             def set_value(self, value):
-                return self.cb.setCurrentIndex(value)
+                if value is not None and value < self.cb.count():
+                    self.cb.setCurrentIndex(value)
+                else:
+                    self.cb.setCurrentIndex(0)
 
         class Integer(String):
             def add_specific(self, value):
@@ -253,37 +314,80 @@ class EasyConfig:
                 return int(self.ed.text()) if self.ed.text().isnumeric() else None
 
         class Slider(InteractorWidget):
+
+            class MySlider(QSlider):
+                def wheelEvent(self, e: QtGui.QWheelEvent) -> None:
+                    e.ignore()
+
+            class MyLabel(QLabel):
+                double_click = pyqtSignal()
+
+                def mouseDoubleClickEvent(self, a0: QtGui.QMouseEvent) -> None:
+                    self.double_click.emit()
+
+            def update(self, **kwargs):
+                if 'maximum' in kwargs:
+                    self.ed.setMaximum(kwargs.get('maximum', 100))
+
             def add_specific(self, value):
+                self.layout.setContentsMargins(6, 6, 6, 6)
                 hbox = QHBoxLayout()
-                self.lbl = QLabel()
+                self.lbl = self.MyLabel()
+
+                def clicked():
+                    min = self.kwargs.get('min', 0) / self.kwargs.get('den', 1)
+
+                    num, ok = QInputDialog.getDouble(self, "Proportional gain", "Enter a gain", min=min, value=1)
+                    if ok:
+                        self.set_value(num)
+
+                self.lbl.double_click.connect(clicked)
+
                 self.lbl.setMinimumWidth(self.kwargs.get("label_width", 25))
-                self.ed = QSlider()
+                self.lbl.setMaximumWidth(self.kwargs.get("label_width", 25))
+                self.ed = self.MySlider()
                 self.ed.setOrientation(Qt.Horizontal)
                 self.ed.setMinimum(self.kwargs.get('min', 0))
                 self.ed.setMaximum(self.kwargs.get('max', 100))
                 self.ed.valueChanged.connect(self.slider_moved)
                 self.denom = self.kwargs.get('den', 1)
                 self.ed.setContentsMargins(2, 2, 2, 2)
-                #self.layout.addWidget(self.ed)
+                # self.layout.addWidget(self.ed)
                 hbox.addWidget(self.lbl)
                 hbox.addWidget(self.ed)
                 self.layout.addLayout(hbox)
                 self.set_value(value)
+
             def get_valid(self):
-                return self.get_common().union(["min", "max", "den", "label_width"])
+                return self.get_common().union(["min", "max", "den", "label_width", "grow"])
 
             def slider_moved(self, value):
-                fmt = self.kwargs.get("fmt","{}")
-                self.value_changed.emit()
-                self.lbl.setText(fmt.format(self.ed.value() / self.denom))
+                fmt = self.kwargs.get("fmt", "{}")
+
+                if self.emit_cb:
+                    self.value_changed.emit()
+
+                if type(fmt) == int:
+                    self.lbl.setText(str(round(self.ed.value() / self.denom, int(fmt))).rstrip('0').rstrip('.'))
+                else:
+                    self.lbl.setText(fmt.format(self.ed.value() / self.denom))
 
             def set_value(self, value):
-                fmt = self.kwargs.get("fmt","{}")
+                self.ed: QSlider
+                if self.kwargs.get("grow", False) and int(value * self.denom) > self.ed.maximum():
+                    self.ed.setMaximum(int(value * self.denom))
+                fmt = self.kwargs.get("fmt", "{}")
                 self.ed.setValue(int(value * self.denom))
-                self.lbl.setText(fmt.format(self.ed.value() / self.denom))
+                if type(fmt) == int:
+                    self.lbl.setText(str(round(self.ed.value() / self.denom, int(fmt))).rstrip('0').rstrip('.'))
+                else:
+                    self.lbl.setText(fmt.format(self.ed.value() / self.denom))
+
+            def reset(self):
+                self.ed.setMaximum(self.kwargs.get("max", 100))
 
             def get_value(self):
-                return self.ed.value() / self.denom
+                return float(self.ed.value() / self.denom)
 
         class Label(InteractorWidget):
             def add_specific(self, value):
@@ -296,8 +400,11 @@ class EasyConfig:
 
             def set_value(self, value):
                 fmt = self.kwargs.get("fmt", "{}")
-                self.ed.setText(fmt.format(value))
-                #self.ed.setText(str(value))
+                if value is not None:
+                    self.ed.setText(fmt.format(value))
+                else:
+                    self.ed.setText("")
+                # self.ed.setText(str(value))
 
             def get_value(self):
                 return self.ed.text()
@@ -315,42 +422,28 @@ class EasyConfig:
                     else None
                 )
 
-        class Checkbox(QWidget):
-            value_changed = pyqtSignal()
-
+        class Checkbox(InteractorWidget):
             def state_changed(self):
-                if self.callback:
-                    self.callback(self.cb.isChecked())
+                self.value_changed.emit()
 
-            def __init__(self, name, value, pretty, **kwargs):
-                super().__init__(None)
-                self.name = name
-                self.pretty = kwargs.get("pretty", name)
-                self.layout = QHBoxLayout()
-                self.cb = QCheckBox()
-                self.cb.stateChanged.connect(self.state_changed)
-                # self.cb.tr.connect(lambda: self.value_changed.emit())
-                self.layout.setAlignment(Qt.AlignLeft)
-                # self.cb.setLayoutDirection(Qt.RightToLeft)
-                ql = QLabel(pretty)
-                # self.layout.addWidget(ql)
-                ql.setMinimumWidth(100)
-                self.callback = kwargs.get("callback", None)
+            def __init__(self, name, value, **kwargs):
+                super().__init__(name, value, **kwargs)
 
-                self.layout.addWidget(self.cb)
-                self.layout.setContentsMargins(5, 9, 2, 9)
-                self.setLayout(self.layout)
-                if value is not None:
-                    self.cb.setChecked(value)
+            def add_specific(self, value):
+                self.layout.setContentsMargins(6, 6, 6, 6)
+                self.ed = QCheckBox()
+                self.ed.stateChanged.connect(self.state_changed)
+                self.layout.addWidget(self.ed)
+                self.set_value(value)
 
             def get_name(self):
                 return self.name
 
             def get_value(self):
-                return int(self.cb.isChecked())
+                return self.ed.isChecked()
 
             def set_value(self, value):
-                self.cb.setChecked(value > 0)
+                self.ed.setChecked(value if value is not None else False)
 
         class File(String):
             def __init__(self, name, value, **kwargs):
@@ -375,7 +468,7 @@ class EasyConfig:
 
             def open_file(self):
                 extension = self.kwargs.get("extension", "txt")
-                extension_name = self.kwargs.get("extension_name", self.extension if type(self.extension) == str else "")
+                extension_name = self.kwargs.get("extension_name", extension if type(extension) == str else "")
 
                 ext_filter = "("
                 if type(extension) == list:
@@ -385,8 +478,6 @@ class EasyConfig:
                     ext_filter += "*." + extension
 
                 ext_filter = ext_filter.rstrip() + ")"
-
-                print(ext_filter, "ext_filter")
 
                 file_name, _ = QFileDialog.getOpenFileName(
                     self,
@@ -417,6 +508,7 @@ class EasyConfig:
             super().__init__(None)
             self.setWindowTitle("EasyConfig")
             layout = QVBoxLayout(self)
+            layout.setContentsMargins(0, 0, 0, 0)
             self.list = QTreeWidget()
             # self.list.setStyleSheet('background: palette(window)')
             self.list.header().setVisible(False)
@@ -448,7 +540,6 @@ class EasyConfig:
             self.list.resizeColumnToContents(0)
             # self.setMinimumWidth(500)
 
-
         def eventFilter(self, a0, a1) -> bool:
             if a1.type() == QtCore.QEvent.KeyPress:
                 if a1.key() in [Qt.Key_Return]:
@@ -468,7 +559,6 @@ class EasyConfig:
             self.bb.rejected.connect(self.reject)
 
             vbox.addWidget(self.bb)
-
 
     class Elem:
         class Kind:
@@ -490,6 +580,8 @@ class EasyConfig:
             CHOSE_DIR = 13
             LABEL = 14
             SLIDER = 15
+            DOUBLE_TEXT = 16
+            DICTIONARY = 17
             ROOT = 254
 
             @staticmethod
@@ -508,19 +600,24 @@ class EasyConfig:
             self.kwargs = kwargs
             self.save = kwargs.get("save", True)
             self.hidden = kwargs.get("hidden", False)
-            #self.callback = kwargs.get("callback", None)
+            # self.callback = kwargs.get("callback", None)
             default = kwargs.get("default", None)
             self.value = kwargs.get("val", kwargs.get("value", default))
-            #self.pretty = kwargs.get("pretty", key)
+            # self.pretty = kwargs.get("pretty", key)
             self.default_params = {}
             self.key = key
             self.child = []
             self.parent = parent
             self.node = None
             self.w = None
+            self.tree_view_item = None
+
+        def set_visible(self, value):
+            if self.tree_view_item is not None:
+                self.tree_view_item.setHidden(not value)
 
         def set_default_params(self, params_dict, append=None, remove=[]):
-            print("setdef", self.key, params_dict, self.default_params)
+            # print("setdef", self.key, params_dict, self.default_params)
             self.default_params = params_dict.copy()
             if append is not None:
                 self.default_params.update(append)
@@ -530,10 +627,16 @@ class EasyConfig:
         def get_value(self):
             return self.value
 
-        def set_value(self, value):
+        def update(self, **kwargs):
+            if self.w is not None:
+                self.w.update(**kwargs)
+
+        def set_value(self, value, emit=True):
             self.value = value
             if self.w is not None:
+                self.w.set_emit_callback(emit)
                 self.w.set_value(value)
+                self.w.set_emit_callback(True)
 
         def add(self, key, kind=Kind.STR, **kwargs):
 
@@ -571,6 +674,8 @@ class EasyConfig:
         def addString(self, name, **kwargs):
             return self.add(name, EasyConfig.Elem.Kind.STR, **kwargs)
 
+        def addDict(self, name, **kwargs):
+            return self.add(name, EasyConfig.Elem.Kind.DICTIONARY, **kwargs)
 
         def addList(self, name, **kwargs):
             return self.add(name, EasyConfig.Elem.Kind.LIST, **kwargs)
@@ -608,6 +713,9 @@ class EasyConfig:
         def addCombobox(self, name, **kwargs):
             return self.add(name, EasyConfig.Elem.Kind.COMBOBOX, **kwargs)
 
+        def addDoubleText(self, name, **kwargs):
+            return self.add(name, EasyConfig.Elem.Kind.DOUBLE_TEXT, **kwargs)
+
         def addChild(self, elem):
             self.child.append(elem)
 
@@ -624,9 +732,8 @@ class EasyConfig:
             return elem
 
         def addHidden(self, key, **kwargs):
-            kwargs.update({'hidden':True})
+            kwargs.update({'hidden': True})
             return self.addSubSection(key, **kwargs)
-
 
         def create(self, list, node):
             parent = node
@@ -656,6 +763,10 @@ class EasyConfig:
                 self.w.set_value(e.value)
             elif e.kind == EasyConfig.Elem.Kind.LIST:
                 self.w = EasyConfig.ConfigWidget.List(e.key, e.value, **e.kwargs)
+            elif e.kind == EasyConfig.Elem.Kind.DICTIONARY:
+                pass
+            elif e.kind == EasyConfig.Elem.Kind.DOUBLE_TEXT:
+                self.w = EasyConfig.ConfigWidget.DoubleLabel(e.key, e.value, **e.kwargs)
             else:
                 self.w = EasyConfig.ConfigWidget.String(e.key, e.value, **e.kwargs)
 
@@ -665,7 +776,9 @@ class EasyConfig:
             child.setText(0, self.kwargs.get("pretty", self.key))
             parent.addChild(child)
             # list.setItemWidget(child, 0, QLabel(self.pretty + "ss"))
+            # print("add", self.key, child)
             list.setItemWidget(child, 1, self.w)
+            self.tree_view_item = child
             # list.setItemWidget(child, 0, QLabel(self.pretty))
 
         def update_value(self, value):
@@ -721,6 +834,8 @@ class EasyConfig:
 
                 if dic is not None:
                     self.value = dic.get(self.key, self.value)
+                    if self.w is not None:
+                        self.w.set_value(self.value)
 
         def fill_tree_widget(self, list, node=None):
             if self.kind == EasyConfig.Elem.Kind.ROOT:
@@ -729,14 +844,11 @@ class EasyConfig:
                 if not self.hidden:
                     qtw = QTreeWidgetItem()
                     node.addChild(qtw)
-                    if False:
-
-                        label = QLabel(self.pretty)
-                        label.setContentsMargins(2, 2, 2, 2)
-                        list.setItemWidget(qtw, 0, label)
-                    else:
-                        qtw.setText(0, self.kwargs.get("Pretty", self.key))
-
+                    # qtw.setText(0, self.kwargs.get("Pretty", self.key))
+                    label = QLabel(self.kwargs.get("Pretty", self.key))
+                    label.setContentsMargins(2, 2, 2, 2)
+                    list.setItemWidget(qtw, 0, label)
+                    self.tree_view_item = qtw
                     node = qtw
             elif not self.hidden and not self.parent.hidden:
                 self.create(list, node)
@@ -747,12 +859,11 @@ class EasyConfig:
     def __init__(self, default_params={}):
         self.min_height = None
         self.min_width = None
-        print("init_easyconf", default_params)
         self.root_node = self.Elem("root", EasyConfig.Elem.Kind.ROOT, None)
         self.root_node.set_default_params(default_params)
         self.reserved = "main"
         self.expanded = None
-
+        self.widget = None
 
     def tab(self):
         return self
@@ -761,11 +872,11 @@ class EasyConfig:
         return self.root_node
 
     def get_widget(self):
-        dialog = self.ConfigWidget(self.root_node)
-        #dialog.bb.setVisible(False)
+        self.widget = self.ConfigWidget(self.root_node)
+        # dialog.bb.setVisible(False)
         if self.expanded:
-            dialog.set_expanded(self.expanded)
-        return dialog
+            self.widget.set_expanded(self.expanded)
+        return self.widget
 
     def set_dialog_minimum_size(self, width=None, height=None):
         self.min_width = width
@@ -798,7 +909,7 @@ class EasyConfig:
 
     def get(self, key, default=None, create=False):
         if key is None:
-            return None#, val=value)
+            return None  # , val=value)
         elif not key.startswith("/"):
             nodes = self.get_nodes(key)
             if len(nodes) > 0:
@@ -843,7 +954,6 @@ class EasyConfig:
             if node is not None:
                 node.set_value(value)
             elif create:
-                print("ajajajajaj", value)
                 elem = self.root().add(key, self.Elem.Kind.type2Kind(value))
                 elem.set_value(value)
                 return True
@@ -861,9 +971,10 @@ class EasyConfig:
 
     def save(self, filename):
         tree = dict()
+        if self.widget is not None:
+            self.expanded = self.widget.get_expanded()
         self.root_node.getDictionary(tree)
         self.store_easyconfig_info(tree)
-
         with open(filename, "w") as f:
             yaml.dump(tree, f, sort_keys=False)
 
@@ -903,7 +1014,8 @@ class EasyConfig:
                 self.recover_easyconfig_info(config)
                 self.root_node.load(config)
         except:
-            pass
+            traceback.print_exc()
+
 
 class MainWindow(QPushButton):
     def __init__(self):
@@ -911,17 +1023,19 @@ class MainWindow(QPushButton):
         self.setText("Try!")
         self.setGeometry(QRect(100, 100, 100, 100))
 
-        self.c = EasyConfig({"editable":False})
+        self.c = EasyConfig({"editable": False})
         first_level = self.c.root().addSubSection("first_level", pretty="First level")
-        first_level.addLabel("Label", pretty="One label", default="hola",save=False)
-        first_level.addString("string", pretty="One string", save=False, callback=lambda x,y: print("cbcbc ",x,y), editable=True)
+        first_level.addLabel("Label", pretty="One label", default="hola", save=False)
+        first_level.addString("string", pretty="One string", save=False, callback=lambda x, y: print("cbcbc ", x, y),
+                              editable=True)
         first_level.addInt("int", pretty="One int", default=27)
         self.lis = first_level.addList("list", pretty="One list", items=["a", "b", "c"])
         first_level.addFloat("float", pretty="One float", default=28)
         second_level = first_level.addSubSection("second_level", pretty="Second Level", editable=True)
-        second_level.addCombobox("Combo", pretty="One combobox", items=["a", "b", "c"], callback=lambda x,y: print("hhh",x,y))
+        second_level.addCombobox("Combo", pretty="One combobox", items=["a", "b", "c"],
+                                 callback=lambda x, y: print("hhh", x, y))
         second_level.addFile("load_file", pretty="One file", extension="jpg")
-        second_level.addFileSave("save_file",  extension="jpg", editable=True)
+        second_level.addFileSave("save_file", extension="jpg", editable=True)
         second_level.addString("string27")
 
         first_level.addFolderChoice("chose_folder", pretty="Choose folder", extension="jpg")
@@ -938,6 +1052,8 @@ class MainWindow(QPushButton):
         self.c.set("/private44/more_private/private_int2", 41, create=True)
         print("kjhdflkjhslkjf", self.c.root().default_params)
         self.clicked.connect(self.test)
+        first_level.set_visible(False)
+        self.first_level = first_level
 
     def test(self):
         # self.c.load("co.yaml")
@@ -947,13 +1063,14 @@ class MainWindow(QPushButton):
         # self.c.set("/minollo/minolli/hdhdh", 6, create=True)
 
         def do():
-            #print(self.c.get("string"), self.c.get("int"))
-            #self.c.set("int", self.c.get("int") + 1)
+            # print(self.c.get("string"), self.c.get("int"))
+            # self.c.set("int", self.c.get("int") + 1)
             self.lis.set_value(["a", "d"])
+            self.first_level.set_visible(False)
 
         self.qt = QTimer()
         self.qt.timeout.connect(do)
-        #self.qt.start(1)
+        self.qt.start(1)
 
         self.c.edit()
         self.c.save("co.yaml")
