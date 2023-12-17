@@ -829,6 +829,7 @@ class EasyConfig:
             else:
                 for k in keys:
                     dic = dic.get(k)
+
                     if dic is None:
                         break
 
@@ -926,6 +927,7 @@ class EasyConfig:
             elif create:
                 default = default if default is not None else str()
                 self.root().add(key, self.Elem.Kind.type2Kind(default), default=default)
+                return default
             else:
                 raise Exception("Key {} not found".format(key))
 
@@ -1007,12 +1009,44 @@ class EasyConfig:
         recu(self.root_node, nodes)
         return nodes
 
+    def add_dynamic_fields(self, config):
+        paths = self.traverse_and_store_paths(config)
+        for p in paths:
+            if p is not None and len(p) > 0:
+                if p[0] != 'easyconfig':
+                    # if this node does not exist
+                    if self.get_node(p) is None:
+                        # but the parent node exists
+                        if (node := self.get_node(p[0:-1])) is not None:
+                            # and is a subsection
+                            if node.kind == EasyConfig.Elem.Kind.SUBSECTION:
+                                # let add the node itself (as string)
+                                node.add(p[-1])
+
+    def traverse_and_store_paths(self, data, path=None, paths=None):
+        if path is None:
+            path = []
+        if paths is None:
+            paths = []
+
+        for key, value in data.items():
+            current_path = path + [key]
+            paths.append(current_path)
+
+            if isinstance(value, dict):
+                self.traverse_and_store_paths(value, current_path, paths)
+
+        return paths
+
     def load(self, filename):
         try:
             with open(filename, "r") as f:
                 config = yaml.safe_load(f)
                 self.recover_easyconfig_info(config)
+                self.add_dynamic_fields(config)
                 self.root_node.load(config)
+
+
         except:
             traceback.print_exc()
 
@@ -1083,3 +1117,4 @@ if __name__ == "__main__":
     window.show()
 
     app.exec()
+
