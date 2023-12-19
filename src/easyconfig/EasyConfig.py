@@ -660,6 +660,7 @@ class EasyConfig:
                 for i in range(field_index + 1, len(fields) - 1):
                     node = node.addSubSection(fields[i])
 
+
                 elem = EasyConfig.Elem(fields[-1], kind, self, **kwargs)
                 elem.set_default_params(self.default_params)
                 node.addChild(elem)
@@ -835,6 +836,8 @@ class EasyConfig:
 
                 if dic is not None:
                     self.value = dic.get(self.key, self.value)
+                    print("setting", self.key,self.value)
+
                     if self.w is not None:
                         self.w.set_value(self.value)
 
@@ -1011,17 +1014,20 @@ class EasyConfig:
 
     def add_dynamic_fields(self, config):
         paths = self.traverse_and_store_paths(config)
-        for p in paths:
-            if p is not None and len(p) > 0:
-                if p[0] != 'easyconfig':
-                    # if this node does not exist
-                    if self.get_node(p) is None:
-                        # but the parent node exists
-                        if (node := self.get_node(p[0:-1])) is not None:
-                            # and is a subsection
-                            if node.kind == EasyConfig.Elem.Kind.SUBSECTION:
-                                # let add the node itself (as string)
-                                node.add(p[-1])
+        for path in paths:
+            if len(path) > 0:
+                node = self.get_node([path[0]])
+                if node is None or node.kind != EasyConfig.Elem.Kind.SUBSECTION:
+                    # Not an easyconfig dynamic path
+                    continue
+
+                for i in range(1,len(path)-1):
+                    child = self.get_node(path[0:i+1])
+                    if child is None:
+                        node = node.add(path[i], EasyConfig.Elem.Kind.SUBSECTION)
+                    else:
+                        node = child
+                node.add(path[-1])
 
     def traverse_and_store_paths(self, data, path=None, paths=None):
         if path is None:
@@ -1031,10 +1037,11 @@ class EasyConfig:
 
         for key, value in data.items():
             current_path = path + [key]
-            paths.append(current_path)
 
             if isinstance(value, dict):
                 self.traverse_and_store_paths(value, current_path, paths)
+            else:
+                paths.append(current_path)
 
         return paths
 
@@ -1117,4 +1124,3 @@ if __name__ == "__main__":
     window.show()
 
     app.exec()
-
