@@ -1015,6 +1015,8 @@ class EasyConfig:
     def add_dynamic_fields(self, config):
         paths = self.traverse_and_store_paths(config)
         for path in paths:
+            if self.get_node(path) is not None:
+                continue
             if len(path) > 0:
                 node = self.get_node([path[0]])
                 if node is None or node.kind != EasyConfig.Elem.Kind.SUBSECTION:
