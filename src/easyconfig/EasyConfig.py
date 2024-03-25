@@ -195,6 +195,9 @@ class EasyConfig:
             def get_valid(self):
                 return self.get_common().union(["items", "height", "frame"])
 
+            def get_value(self):
+                return self.ed.currentItem().text() if self.ed.currentItem() is not None else None
+
             def set_value(self, value):
                 self.ed.clear()
                 self.ed.addItems(value)
@@ -1091,6 +1094,10 @@ class MainWindow(QPushButton):
         hidden.addInt("hidden_int")
         self.c.root().addInt("/danilo/tardioli")
         first_level.addInt("kakka/kakka2/kakka3", default=6)
+        self.auto = self.c.root().addHidden("auto")
+
+
+
         self.c.get("/private44/more_private/private_int", 4, create=True)
         self.c.set("/private44/more_private/private_int2", 41, create=True)
         print("kjhdflkjhslkjf", self.c.root().default_params)
@@ -1109,11 +1116,11 @@ class MainWindow(QPushButton):
             # print(self.c.get("string"), self.c.get("int"))
             # self.c.set("int", self.c.get("int") + 1)
             self.lis.set_value(["a", "d"])
-            self.first_level.set_visible(False)
+            #self.first_level.set_visible(False)
 
         self.qt = QTimer()
         self.qt.timeout.connect(do)
-        self.qt.start(1)
+        #self.qt.start(1)
 
         self.c.edit()
         self.c.save("co.yaml")
