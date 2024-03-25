@@ -45,23 +45,23 @@ class EasyConfig:
 
     def edit(self):
 
-        widget = ConfigWidget(self.root_node)
-        dialog = Dialog(widget)
+        config_widget = ConfigWidget(self.root_node)
+        dialog = Dialog(config_widget)
 
         if self.min_width is not None:
-            widget.setMinimumWidth(self.min_width)
+            config_widget.setMinimumWidth(self.min_width)
         if self.min_height is not None:
-            widget.setMinimumHeight(self.min_height)
+            config_widget.setMinimumHeight(self.min_height)
 
-        widget.list.collapseAll()
+        config_widget.list.collapseAll()
         if self.expanded:
-            widget.set_expanded(self.expanded)
+            config_widget.set_expanded(self.expanded)
 
         res = dialog.exec()
-        self.expanded = widget.get_expanded()
+        self.expanded = config_widget.get_expanded()
 
         if res == QDialog.Accepted:
-            self.root_node.collect()
+            config_widget.collect()
 
         return res
 

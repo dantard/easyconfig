@@ -1,11 +1,23 @@
+from PyQt5.QtCore import QObject, pyqtSignal
 from PyQt5.QtWidgets import QTreeWidgetItem, QLabel
 
 from config_widget import ConfigWidget
 from kind import Kind
+from widgets import DoubleLabel, String, List, EditBox, Password, Float, ComboBox, Checkbox, FolderChoice, SaveFile, File, Slider, Label, Integer
 
 
-class Elem:
+class Elem(QObject):
+
+    class Wrapper:
+        def __init__(self, **kwargs):
+            self.elem = kwargs
+
+    value_changed = pyqtSignal()
+    param_changed = pyqtSignal(dict)
+
+
     def __init__(self, key, kind, parent=None, **kwargs):
+        super().__init__()
         self.kind = kind
         self.kwargs = kwargs
         self.save = kwargs.get("save", True)
@@ -16,12 +28,6 @@ class Elem:
         self.child = []
         self.parent = parent
         self.node = None
-        self.w = None
-        self.tree_view_item = None
-
-    def set_visible(self, value):
-        if self.tree_view_item is not None:
-            self.tree_view_item.setHidden(not value)
 
     def set_default_params(self, params_dict, append=None, remove=None):
         self.default_params = params_dict.copy()
@@ -37,16 +43,13 @@ class Elem:
     def get_value(self):
         return self.value
 
-    def update(self, **kwargs):
-        if self.w is not None:
-            self.w.update(**kwargs)
+    def update_param(self, **kwargs):
+        print("update_param", kwargs)
+        self.param_changed.emit(kwargs)
 
     def set_value(self, value, emit=True):
         self.value = value
-        if self.w is not None:
-            self.w.set_emit_callback(emit)
-            self.w.set_value(value)
-            self.w.set_emit_callback(True)
+        self.value_changed.emit()
 
     def add(self, key, kind=Kind.STR, **kwargs):
 
@@ -142,61 +145,19 @@ class Elem:
         self.addChild(elem)
         return elem
 
+    def get_pretty(self):
+        return self.kwargs.get("pretty", self.key)
+
     def addHidden(self, key, **kwargs):
         kwargs.update({'hidden': True})
         return self.addSubSection(key, **kwargs)
 
-    def create(self, list, node):
-        parent = node
-        e = self
-        if e.kind == Kind.INT:
-            self.w = ConfigWidget.Integer(e.key, e.value, **e.kwargs)
-        elif e.kind == Kind.LABEL:
-            self.w = ConfigWidget.Label(e.key, e.value, **e.kwargs)
-        elif e.kind == Kind.SLIDER:
-            self.w = ConfigWidget.Slider(e.key, e.value, **e.kwargs)
-        elif e.kind == Kind.FILE:
-            self.w = ConfigWidget.File(e.key, e.value, **e.kwargs)
-        elif e.kind == Kind.FILE_SAVE:
-            self.w = ConfigWidget.SaveFile(e.key, e.value, **e.kwargs)
-        elif e.kind == Kind.CHOSE_DIR:
-            self.w = ConfigWidget.FolderChoice(e.key, e.value, **e.kwargs)
-        elif e.kind == Kind.CHECKBOX:
-            self.w = ConfigWidget.Checkbox(e.key, e.value, **e.kwargs)
-        elif e.kind == Kind.COMBOBOX:
-            self.w = ConfigWidget.ComboBox(e.key, e.value, **e.kwargs)
-        elif e.kind == Kind.FLOAT:
-            self.w = ConfigWidget.Float(e.key, e.value, **e.kwargs)
-        elif e.kind == Kind.PASSWORD:
-            self.w = ConfigWidget.Password(e.key, e.value, **e.kwargs)
-        elif e.kind == Kind.EDITBOX:
-            self.w = ConfigWidget.EditBox(e.key, e.value, **e.kwargs)
-            self.w.set_value(e.value)
-        elif e.kind == Kind.LIST:
-            self.w = ConfigWidget.List(e.key, e.value, **e.kwargs)
-        elif e.kind == Kind.DICTIONARY:
-            pass
-        elif e.kind == Kind.DOUBLE_TEXT:
-            self.w = ConfigWidget.DoubleLabel(e.key, e.value, **e.kwargs)
-        else:
-            self.w = ConfigWidget.String(e.key, e.value, **e.kwargs)
-
-        self.w.value_changed.connect(lambda: self.update_value(self.w.get_value()))
-
-        child = QTreeWidgetItem()
-        child.setText(0, self.kwargs.get("pretty", self.key))
-        parent.addChild(child)
-        list.setItemWidget(child, 1, self.w)
-        self.tree_view_item = child
-
     def update_value(self, value):
         self.value = value
+        print("Update value", self.key, value)
         callback = self.kwargs.get("callback")
         if callback is not None:
-            if self.kind == Kind.COMBOBOX:
-                callback(self.key, self.w.get_item_text())
-            else:
-                callback(self.key, self.value)
+            callback(self.key, self.value)
 
     def getDictionary(self, dic):
         if self.kind == Kind.ROOT:
@@ -212,18 +173,6 @@ class Elem:
         else:
             if self.save:
                 dic[self.key] = self.value
-
-    def collect(self):
-        if self.kind == Kind.ROOT:
-            for c in self.child:
-                c.collect()
-        elif self.kind == Kind.SUBSECTION:
-            if not self.hidden:
-                for c in self.child:
-                    c.collect()
-        elif not self.hidden and not self.parent.hidden:
-            self.value = self.w.get_value()
-            self.w = None
 
     def load(self, dic, keys=None):
         if self.kind == Kind.ROOT:
@@ -244,28 +193,6 @@ class Elem:
             if dic is not None:
                 self.value = dic.get(self.key, self.value)
                 print("setting", self.key, self.value)
-
-                if self.w is not None:
-                    self.w.set_value(self.value)
-
-    def fill_tree_widget(self, list, node=None):
-        if self.kind == Kind.ROOT:
-            node = list.invisibleRootItem()
-        elif self.kind == Kind.SUBSECTION:
-            if not self.hidden:
-                qtw = QTreeWidgetItem()
-                node.addChild(qtw)
-                # qtw.setText(0, self.kwargs.get("Pretty", self.key))
-                label = QLabel(self.kwargs.get("pretty", self.key))
-                label.setContentsMargins(2, 2, 2, 2)
-                list.setItemWidget(qtw, 0, label)
-                self.tree_view_item = qtw
-                node = qtw
-        elif not self.hidden and not self.parent.hidden:
-            self.create(list, node)
-
-        for c in self.child:
-            c.fill_tree_widget(list, node)
 
     def get_children(self, key):
         def recu(node, found):
@@ -341,3 +268,6 @@ class Elem:
             return True
         else:
             raise Exception("Key {} not found".format(key))
+
+    def get_param(self, key, default=None):
+        return self.kwargs.get(key, default)
