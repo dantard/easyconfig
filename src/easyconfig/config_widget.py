@@ -8,8 +8,8 @@ from PyQt5.QtWidgets import (
     QScrollArea, QTreeWidgetItem, QLabel
 )
 
-from kind import Kind
-from widgets import Integer, Label, Slider, File, SaveFile, FolderChoice, Checkbox, ComboBox, Float, Password, EditBox, List, DoubleLabel, String
+from easyconfig.kind import Kind
+from easyconfig.widgets import Integer, Label, Slider, File, SaveFile, FolderChoice, Checkbox, ComboBox, Float, Password, EditBox, List, DoubleLabel, String
 
 
 class ConfigWidget(QWidget):

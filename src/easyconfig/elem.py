@@ -1,9 +1,6 @@
 from PyQt5.QtCore import QObject, pyqtSignal
-from PyQt5.QtWidgets import QTreeWidgetItem, QLabel
 
-from config_widget import ConfigWidget
-from kind import Kind
-from widgets import DoubleLabel, String, List, EditBox, Password, Float, ComboBox, Checkbox, FolderChoice, SaveFile, File, Slider, Label, Integer
+from easyconfig.kind import Kind
 
 
 class Elem(QObject):

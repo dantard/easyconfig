@@ -233,7 +233,7 @@ class EditBox(String):
 class Password(String):
     def __init__(self, elem):
         super().__init__(elem)
-        value = base64.decodebytes(value.encode()).decode() if value else None
+        #value = base64.decodebytes(value.encode()).decode() if value else None
         self.widget.setEchoMode(QLineEdit.Password)
 
     def get_value(self):

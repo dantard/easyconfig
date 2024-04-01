@@ -1,20 +1,16 @@
 import sys
-import sys
 import traceback
+from pathlib import Path
 
 import yaml
-from PyQt5.QtCore import QRect, QTimer
 from PyQt5.QtWidgets import (
-    QApplication,
-    QPushButton,
     QDialog
 )
 
-from config_widget import ConfigWidget
-from dialog import Dialog
-from elem import Elem
-from kind import Kind
-
+from easyconfig.config_widget import ConfigWidget
+from easyconfig.dialog import Dialog
+from easyconfig.elem import Elem
+from easyconfig.kind import Kind
 
 class EasyConfig:
 
