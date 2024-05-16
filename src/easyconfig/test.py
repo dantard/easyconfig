@@ -28,16 +28,21 @@ class MainWindow(QPushButton):
 
         hidden = root.addHidden("hidden")
         hidden.addString("hidden_string", pretty="Hidden String", default="Hidden")
+        dic = hidden.addDict("hidden_dict", pretty="Hidden Dict")
+        #dic.set_value({"key1": "value1", "key2": "value2"})
+
 
         self.config.load("config.yaml")
 
+        # print("The dictionary is", dic.get_value())
+
         self.qt = QTimer()
         self.qt.timeout.connect(self.print)
-        self.qt.start(1000)
+        #self.qt.start(1000)
 
         self.config.edit()
 
-        self.config.save("config.yaml")
+        #self.config.save("config.yaml")
 
     def cba(self, a, b):
         print(self.cb.get_value(), a, b, self.combo_box.get_param("items"))

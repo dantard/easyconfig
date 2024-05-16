@@ -41,7 +41,7 @@ class Elem(QObject):
         return self.value
 
     def update_param(self, **kwargs):
-        print("update_param", kwargs)
+        # print("update_param", kwargs)
         self.param_changed.emit(kwargs)
 
     def set_value(self, value, emit=True):
@@ -151,7 +151,7 @@ class Elem(QObject):
 
     def update_value(self, value):
         self.value = value
-        print("Update value", self.key, value)
+        # print("Update value", self.key, value)
         callback = self.kwargs.get("callback")
         if callback is not None:
             callback(self.key, self.value)
@@ -189,7 +189,7 @@ class Elem(QObject):
 
             if dic is not None:
                 self.value = dic.get(self.key, self.value)
-                print("setting", self.key, self.value)
+                # print("setting", self.key, self.value)
 
     def get_children(self, key):
         def recu(node, found):
@@ -206,7 +206,7 @@ class Elem(QObject):
         node = self
         for p in keys:
             found = False
-            for c in node.child:
+            for c in node.child: # type: Elem
                 if c.key.lower() == p.lower():  # or c.pretty.lower() == p.lower():
                     found = True
                     node = c

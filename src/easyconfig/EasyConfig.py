@@ -81,9 +81,19 @@ class EasyConfig:
 
     def add_dynamic_fields(self, config):
         paths = self.traverse_and_store_paths(config)
+        # print("paths", paths)
         for path in paths:
+
+            # Check if this path exists
             if self.root().get_child(path) is not None:
+                # print("Path already exists", path)
                 continue
+
+            # Check if this path exists as a dictionary
+            is_it_a_dictionary = self.root().get_child(path[:-1])
+            if is_it_a_dictionary is not None and is_it_a_dictionary.kind == Kind.DICTIONARY:
+                continue
+
             if len(path) > 0:
                 node = self.root().get_child([path[0]])
                 if node is None or node.kind != Kind.SUBSECTION:

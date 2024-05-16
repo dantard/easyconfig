@@ -47,7 +47,7 @@ class InteractorWidget(QWidget):
         self.set_value(self.elem.get_value())
 
     def param_changed_external(self, kwargs):
-        print("param_changed_external", kwargs)
+        # print("param_changed_external", kwargs)
         self.update(**kwargs)
 
     def set_value(self, value):
@@ -185,7 +185,7 @@ class List(InteractorWidget):
         self.widget.addItems(value)
 
     def update(self, **kwargs) -> None:
-        print("List update", kwargs)
+        # print("List update", kwargs)
         if "items" in kwargs:
             self.widget.clear()
             self.widget.addItems(kwargs["items"])
@@ -261,7 +261,7 @@ class ComboBox(InteractorWidget):
         self.widget.setCurrentIndex(value if value is not None else 0)
 
     def update(self, **kwargs):
-        print("List update", kwargs)
+        # print("List update", kwargs)
 
         items = kwargs.get("append")
         if items is not None:
