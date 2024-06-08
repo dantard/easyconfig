@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import sys
 
 from PyQt5.QtCore import QRect, QTimer
@@ -29,20 +30,27 @@ class MainWindow(QPushButton):
         hidden = root.addHidden("hidden")
         hidden.addString("hidden_string", pretty="Hidden String", default="Hidden")
         dic = hidden.addDict("hidden_dict", pretty="Hidden Dict")
-        #dic.set_value({"key1": "value1", "key2": "value2"})
+        # dic.set_value({"key1": "value1", "key2": "value2"})
 
-
-        self.config.load("config.yaml")
+        self.config.load("config.yaml", info)
 
         # print("The dictionary is", dic.get_value())
 
         self.qt = QTimer()
         self.qt.timeout.connect(self.print)
-        #self.qt.start(1000)
+        # self.qt.start(1000)
 
-        self.config.edit()
+        self.config.edit(info)
 
-        #self.config.save("config.yaml")
+        info2 = root.addSubSection("info2", pretty="Information 2")
+        name2 = info2.addString("name2", pretty="Name", default="John")
+        surname2 = info2.addString("surname2", pretty="Surname", default="Doe", editable=False, save=False)
+        self.config.load("config.yaml", info2)
+        self.config.edit(info2)
+        self.config.save("config.yaml")
+        sys.exit(0)
+
+        # self.config.save("config.yaml")
 
     def cba(self, a, b):
         print(self.cb.get_value(), a, b, self.combo_box.get_param("items"))

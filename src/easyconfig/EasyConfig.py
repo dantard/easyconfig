@@ -12,6 +12,7 @@ from easyconfig.dialog import Dialog
 from easyconfig.elem import Elem
 from easyconfig.kind import Kind
 
+
 class EasyConfig:
 
     def __init__(self, **kwargs):
@@ -36,12 +37,14 @@ class EasyConfig:
         self.min_width = width
         self.min_height = height
 
-    def exec(self):
-        return self.edit()
+    def exec(self, node=None):
+        return self.edit(node)
 
-    def edit(self):
+    def edit(self, node=None):
+        if node is None:
+            node = self.root_node
 
-        config_widget = ConfigWidget(self.root_node)
+        config_widget = ConfigWidget(node)
         dialog = Dialog(config_widget)
 
         if self.min_width is not None:
@@ -124,13 +127,16 @@ class EasyConfig:
 
         return paths
 
-    def load(self, filename):
+    def load(self, filename, node=None):
+        print(node)
         try:
             with open(filename, "r") as f:
                 config = yaml.safe_load(f)
                 self.recover_easyconfig_info(config)
-                self.add_dynamic_fields(config)
-                self.root_node.load(config)
+                # self.add_dynamic_fields(config)
+                if node is None:
+                    node = self.root_node
+                node.load(config)
 
 
         except:

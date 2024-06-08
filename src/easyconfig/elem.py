@@ -4,14 +4,12 @@ from easyconfig.kind import Kind
 
 
 class Elem(QObject):
-
     class Wrapper:
         def __init__(self, **kwargs):
             self.elem = kwargs
 
     value_changed = pyqtSignal()
     param_changed = pyqtSignal(dict)
-
 
     def __init__(self, key, kind, parent=None, **kwargs):
         super().__init__()
@@ -177,6 +175,8 @@ class Elem(QObject):
             for c in self.child:
                 c.load(dic, keys.copy())
         elif self.kind == Kind.SUBSECTION:
+            if keys is None:
+                keys = []
             keys.append(self.key)
             for c in self.child:
                 c.load(dic, keys.copy())
@@ -206,7 +206,7 @@ class Elem(QObject):
         node = self
         for p in keys:
             found = False
-            for c in node.child: # type: Elem
+            for c in node.child:  # type: Elem
                 if c.key.lower() == p.lower():  # or c.pretty.lower() == p.lower():
                     found = True
                     node = c
