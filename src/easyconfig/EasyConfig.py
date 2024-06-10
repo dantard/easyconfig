@@ -64,80 +64,53 @@ class EasyConfig:
 
         return res
 
-    def store_easyconfig_info(self, tree):
+    def store_easyconfig_info(self, tree, node=None):
         if self.expanded:
-            tree["easyconfig"] = {"expanded": "".join(str(e) for e in self.expanded)}
+            if node is None:
+                node = self.root_node
+            if tree.get("easyconfig") is None:
+                tree["easyconfig"] = {}
+            tree["easyconfig"].update({"expanded-" + node.key: "".join(str(e) for e in self.expanded)})
 
-    def recover_easyconfig_info(self, tree):
-        expanded = tree.get("easyconfig", {}).get("expanded")
+    def recover_easyconfig_info(self, tree, node=None):
+        if node is None:
+            node = self.root_node
+        expanded = tree.get("easyconfig", {}).get("expanded-" + node.key)
+        print("expanded", expanded)
         if expanded:
             self.expanded = [int(a) for a in expanded]
 
-    def save(self, filename):
+    def save(self, filename, node=None):
+
         tree = dict()
         if self.widget is not None:
             self.expanded = self.widget.get_expanded()
-        self.root_node.getDictionary(tree)
-        self.store_easyconfig_info(tree)
+
+        if node is None:
+            self.root_node.getDictionary(tree)
+        else:
+            with open(filename, "r") as f:
+                saved_tree = yaml.safe_load(f)
+            node.getDictionary(tree)
+            print("saved", saved_tree)
+            print("new", tree, node.key)
+            saved_tree[node.key] = tree[node.key]
+            tree = saved_tree
+
+        self.store_easyconfig_info(tree, node)
+        print(tree)
         with open(filename, "w") as f:
             yaml.dump(tree, f, sort_keys=False)
-
-    def add_dynamic_fields(self, config):
-        paths = self.traverse_and_store_paths(config)
-        # print("paths", paths)
-        for path in paths:
-
-            # Check if this path exists
-            if self.root().get_child(path) is not None:
-                # print("Path already exists", path)
-                continue
-
-            # Check if this path exists as a dictionary
-            is_it_a_dictionary = self.root().get_child(path[:-1])
-            if is_it_a_dictionary is not None and is_it_a_dictionary.kind == Kind.DICTIONARY:
-                continue
-
-            if len(path) > 0:
-                node = self.root().get_child([path[0]])
-                if node is None or node.kind != Kind.SUBSECTION:
-                    # Not an easyconfig dynamic path
-                    continue
-
-                for i in range(1, len(path) - 1):
-                    child = self.root().get_child(path)(path[0:i + 1])
-                    if child is None:
-                        node = node.add(path[i], Kind.SUBSECTION)
-                    else:
-                        node = child
-                node.add(path[-1])
-
-    def traverse_and_store_paths(self, data, path=None, paths=None):
-        if path is None:
-            path = []
-        if paths is None:
-            paths = []
-
-        for key, value in data.items():
-            current_path = path + [key]
-
-            if isinstance(value, dict):
-                self.traverse_and_store_paths(value, current_path, paths)
-            else:
-                paths.append(current_path)
-
-        return paths
 
     def load(self, filename, node=None):
         print(node)
         try:
             with open(filename, "r") as f:
                 config = yaml.safe_load(f)
-                self.recover_easyconfig_info(config)
+                self.recover_easyconfig_info(config, node)
                 # self.add_dynamic_fields(config)
                 if node is None:
                     node = self.root_node
                 node.load(config)
-
-
         except:
             traceback.print_exc()

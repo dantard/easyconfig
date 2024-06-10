@@ -125,8 +125,114 @@ class Elem(QObject):
     def addDoubleText(self, name, **kwargs):
         return self.add(name, Kind.DOUBLE_TEXT, **kwargs)
 
+    def getDoubleText(self, name, create=True, **kwargs):
+        if self.has_key(name):
+            return self.get_node_by_key(name)
+        elif create:
+            return self.add(name, Kind.DOUBLE_TEXT, **kwargs)
+        return None
+
+    def getCombobox(self, name, create=True, **kwargs):
+        if self.has_key(name):
+            return self.get_node_by_key(name)
+        elif create:
+            return self.add(name, Kind.COMBOBOX, **kwargs)
+        return None
+
+    def getCheckbox(self, name, create=True, **kwargs):
+        if self.has_key(name):
+            return self.get_node_by_key(name)
+        elif create:
+            return self.add(name, Kind.CHECKBOX, **kwargs)
+        return None
+
+    def getFolderChoice(self, name, create=True, **kwargs):
+        if self.has_key(name):
+            return self.get_node_by_key(name)
+        elif create:
+            return self.add(name, Kind.CHOSE_DIR, **kwargs)
+        return None
+
+    def getFileSave(self, name, create=True, **kwargs):
+        if self.has_key(name):
+            return self.get_node_by_key(name)
+        elif create:
+            return self.add(name, Kind.FILE_SAVE, **kwargs)
+        return None
+
+    def getFile(self, name, create=True, **kwargs):
+        if self.has_key(name):
+            return self.get_node_by_key(name)
+        elif create:
+            return self.add(name, Kind.FILE, **kwargs)
+        return None
+
+    def getFloat(self, name, create=True, **kwargs):
+        if self.has_key(name):
+            return self.get_node_by_key(name)
+        elif create:
+            return self.add(name, Kind.FLOAT, **kwargs)
+        return None
+
+    def getSlider(self, name, create=True, **kwargs):
+        if self.has_key(name):
+            return self.get_node_by_key(name)
+        elif create:
+            return self.add(name, Kind.SLIDER, **kwargs)
+        return None
+
+    def getLabel(self, name, create=True, **kwargs):
+        if self.has_key(name):
+            return self.get_node_by_key(name)
+        elif create:
+            return self.add(name, Kind.LABEL, **kwargs)
+        return None
+
+    def getInt(self, name, create=True, **kwargs):
+        if self.has_key(name):
+            return self.get_node_by_key(name)
+        elif create:
+            return self.add(name, Kind.INT, **kwargs)
+        return None
+
+    def getEditBox(self, name, create=True, **kwargs):
+        if self.has_key(name):
+            return self.get_node_by_key(name)
+        elif create:
+            return self.add(name, Kind.EDITBOX, **kwargs)
+        return None
+
+    def getPassword(self, name, create=True, **kwargs):
+        if self.has_key(name):
+            return self.get_node_by_key(name)
+        elif create:
+            return self.add(name, Kind.PASSWORD, **kwargs)
+        return None
+
+    def getString(self, name, create=True, **kwargs):
+        if self.has_key(name):
+            return self.get_node_by_key(name)
+        elif create:
+            return self.add(name, Kind.STR, **kwargs)
+        return None
+
+    def getDictionary(self, name, create=True, **kwargs):
+        if self.has_key(name):
+            return self.get_node_by_key(name)
+        elif create:
+            return self.add(name, Kind.DICTIONARY, **kwargs)
+        return None
+
     def addChild(self, elem):
+        if elem.key in [c.key for c in self.child]:
+            raise Exception(f"Key '{elem.key}' already exists")
         self.child.append(elem)
+
+    def has_key(self, key):
+        return self.get_child(key) is not None
+
+    def get_node_by_key(self, key):
+        return self.get_child(key)
 
     def addSubSection(self, key, **kwargs):
 
@@ -139,6 +245,13 @@ class Elem(QObject):
 
         self.addChild(elem)
         return elem
+
+    def getSubSection(self, key, create=True, **kwargs):
+        if self.has_key(key):
+            return self.get_node_by_key(key)
+        elif create:
+            return self.addSubSection(key, **kwargs)
+        return None
 
     def get_pretty(self):
         return self.kwargs.get("pretty", self.key)
@@ -193,7 +306,7 @@ class Elem(QObject):
 
     def get_children(self, key):
         def recu(node, found):
-            if node and key and node.kind != Kind.SUBSECTION and node.key.lower() == key.lower():
+            if node and key and node.kind != Kind.SUBSECTION and node.key == key:
                 found.append(node)
             for c in node.child:
                 recu(c, found)
@@ -203,13 +316,20 @@ class Elem(QObject):
         return nodes
 
     def get_child(self, keys):
+        if type(keys) == str:
+            keys = keys.lstrip("/").split("/")
+        elif not type(keys) in [list, tuple]:
+            raise Exception("Keys must be a string or list/tuple")
+
         node = self
-        for p in keys:
+        for key in keys:
+            # found refers to to this part of the key
             found = False
-            for c in node.child:  # type: Elem
-                if c.key.lower() == p.lower():  # or c.pretty.lower() == p.lower():
+            for child in node.child:  # type: Elem
+                print("child namd", child.key)
+                if child.key == key:  # or c.pretty.lower() == p.lower():
                     found = True
-                    node = c
+                    node = child
                     break
             if not found:
                 return None
