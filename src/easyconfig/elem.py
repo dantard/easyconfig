@@ -216,6 +216,13 @@ class Elem(QObject):
             return self.add(name, Kind.STR, **kwargs)
         return None
 
+    def getList(self, name, create=True, **kwargs):
+        if self.has_key(name):
+            return self.get_node_by_key(name)
+        elif create:
+            return self.add(name, Kind.LIST, **kwargs)
+        return None
+
     def getDictionary(self, name, create=True, **kwargs):
         if self.has_key(name):
             return self.get_node_by_key(name)
@@ -259,6 +266,13 @@ class Elem(QObject):
     def addHidden(self, key, **kwargs):
         kwargs.update({'hidden': True})
         return self.addSubSection(key, **kwargs)
+
+    def getHidden(self, key, create=True, **kwargs):
+        if self.has_key(key):
+            return self.get_node_by_key(key)
+        elif create:
+            return self.addHidden(key, **kwargs)
+        return None
 
     def update_value(self, value):
         self.value = value
@@ -304,6 +318,7 @@ class Elem(QObject):
                 self.value = dic.get(self.key, self.value)
                 # print("setting", self.key, self.value)
 
+    '''
     def get_children(self, key):
         def recu(node, found):
             if node and key and node.kind != Kind.SUBSECTION and node.key == key:
@@ -314,6 +329,13 @@ class Elem(QObject):
         nodes = []
         recu(self, nodes)
         return nodes
+    '''
+
+    def get_children(self):
+        return self.child
+
+    def get_key(self):
+        return self.key
 
     def get_child(self, keys):
         if type(keys) == str:
@@ -326,7 +348,6 @@ class Elem(QObject):
             # found refers to to this part of the key
             found = False
             for child in node.child:  # type: Elem
-                print("child namd", child.key)
                 if child.key == key:  # or c.pretty.lower() == p.lower():
                     found = True
                     node = child
