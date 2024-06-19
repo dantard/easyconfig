@@ -103,7 +103,6 @@ class EasyConfig:
             yaml.dump(tree, f, sort_keys=False)
 
     def load(self, filename, node=None):
-        print(node)
         try:
             with open(filename, "r") as f:
                 config = yaml.safe_load(f)
@@ -112,5 +111,5 @@ class EasyConfig:
                 if node is None:
                     node = self.root_node
                 node.load(config)
-        except:
-            traceback.print_exc()
+        except Exception as e:
+            print("Config file not found or corrupted")
