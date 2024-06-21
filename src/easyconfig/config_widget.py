@@ -109,7 +109,7 @@ class ConfigWidget(QWidget):
         self.list.setColumnCount(2)
         self.widgets = []
 
-        self.setMinimumHeight(300)
+        self.setMinimumHeight(150)
         # self.list.setMinimumWidth(500)
 
         scroll = QScrollArea()
