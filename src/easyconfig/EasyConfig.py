@@ -76,7 +76,6 @@ class EasyConfig:
         if node is None:
             node = self.root_node
         expanded = tree.get("easyconfig", {}).get("expanded-" + node.key)
-        print("expanded", expanded)
         if expanded:
             self.expanded = [int(a) for a in expanded]
 
@@ -92,13 +91,11 @@ class EasyConfig:
             with open(filename, "r") as f:
                 saved_tree = yaml.safe_load(f)
             node.getDictionary(tree)
-            print("saved", saved_tree)
-            print("new", tree, node.key)
             saved_tree[node.key] = tree[node.key]
             tree = saved_tree
 
         self.store_easyconfig_info(tree, node)
-        print(tree)
+        # print(tree)
         with open(filename, "w") as f:
             yaml.dump(tree, f, sort_keys=False)
 

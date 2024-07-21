@@ -13,7 +13,7 @@ from PyQt5.QtWidgets import (
     QLabel,
     QCheckBox,
     QComboBox,
-    QTextEdit, QSlider, QStyle, QListWidget, QInputDialog
+    QTextEdit, QSlider, QStyle, QListWidget, QInputDialog, QVBoxLayout, QSizePolicy
 )
 
 
@@ -160,25 +160,94 @@ class DoubleLabel(InteractorWidget):
 
 
 class List(InteractorWidget):
+    def __init__(self, elem):
+        super().__init__(elem)
+        self.value_type = elem.kwargs.get("type", "str")
+
+    def ask_value(self):
+        default = self.widget.currentItem().text() if self.widget.currentItem() is not None else ""
+        if self.value_type == "str":
+            default = str(default) if default is not None else ""
+            text, ok = QInputDialog.getText(None, "Input", "Enter item", QLineEdit.Normal, default)
+            return str(text), ok
+        elif self.value_type == "int":
+            try:
+                default = int(default)
+            except ValueError:
+                default = 0
+            text, ok = QInputDialog.getInt(None, "Input", "Enter item", value=default)
+            return str(text), ok
+        elif self.value_type == "float":
+            try:
+                default = float(default)
+            except ValueError:
+                default = 0.0
+            text, ok = QInputDialog.getDouble(None, "Input", "Enter item", value=default)
+            return str(text), ok
+        elif self.value_type == "file":
+            default = str(default) if default is not None else ""
+            text, ok = QFileDialog.getOpenFileName(None, "Open file", default, "All files (*)")
+            return text, ok
+
+    def add_item(self):
+        text, ok = self.ask_value()
+        if ok:
+            self.widget.addItem(str(text))
+
+    def del_item(self):
+        if self.widget.currentItem():
+            self.widget.takeItem(self.widget.currentRow())
+
+    def edit_item(self):
+        if self.widget.currentItem():
+            text, ok = self.ask_value()
+            if ok:
+                self.widget.currentItem().setText(text)
 
     def add_widget(self, value):
+        helper = QWidget()
+        layout = QVBoxLayout()
+        layout.setSpacing(0)
+
+        helper.setLayout(layout)
+        button_add = QPushButton("+")
+        button_del = QPushButton("−")
+        button_edit = QPushButton("✎")
+        button_add.clicked.connect(self.add_item)
+        button_edit.clicked.connect(self.edit_item)
+        button_del.clicked.connect(self.del_item)
+
+        for button in [button_add, button_del, button_edit]:
+            button.setFixedSize(25, 25)
+            button.setStyleSheet("font-size: 14px")
+
+        h_layout = QHBoxLayout()
+        h_layout.addWidget(button_add)
+        h_layout.addWidget(button_edit)
+        spacer = QWidget()
+        spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        h_layout.addWidget(spacer)
+        h_layout.addWidget(button_del)
+        h_layout.setAlignment(Qt.AlignLeft)
+
         self.widget = QListWidget()
-        #                self.widget.setEditable(False)
-        # self.widget.currentIndexChanged.connect(lambda: self.value_changed.emit())
-        self.widget.addItems(self.kwargs.get("items", []))
-        self.layout.addWidget(self.widget)
+        layout.addWidget(self.widget)
+        layout.addLayout(h_layout)
+
+        self.widget.addItems([str(v) for v in value] if value is not None else [])
+        self.layout.addWidget(helper)
         self.widget.setMaximumHeight(self.kwargs.get("height", 100))
         self.widget.setFont(QFont("Courier New", 10))
-        # self.widget.setStyleSheet("QListWidget { background-color: transparent; }")
-        # self.widget.setStyleSheet("QListWidget { border: 1px solid lightgray; }")
-        # if not self.kwargs.get("frame", True):
-        # self.widget.setFrameStyle(QFrame.Box | QFrame.Plain)
 
     def get_valid(self):
-        return self.get_common().union(["items", "height", "frame"])
+        return self.get_common().union(["height", "frame", "type"])
 
     def get_value(self):
-        return self.widget.currentItem().text() if self.widget.currentItem() is not None else None
+        if self.value_type == "int":
+            return [int(self.widget.item(i).text()) for i in range(self.widget.count())]
+        elif self.value_type == "float":
+            return [float(self.widget.item(i).text()) for i in range(self.widget.count())]
+        return [self.widget.item(i).text() for i in range(self.widget.count())]
 
     def set_value(self, value):
         self.widget.clear()
@@ -193,7 +262,6 @@ class List(InteractorWidget):
         if "on_selection" in kwargs:
             self.widget: QListWidget
             self.widget.doubleClicked.connect(kwargs["on_selection"])
-
 
 class EditBox(String):
 
@@ -233,7 +301,7 @@ class EditBox(String):
 class Password(String):
     def __init__(self, elem):
         super().__init__(elem)
-        #value = base64.decodebytes(value.encode()).decode() if value else None
+        # value = base64.decodebytes(value.encode()).decode() if value else None
         self.widget.setEchoMode(QLineEdit.Password)
 
     def get_value(self):

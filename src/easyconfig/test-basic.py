@@ -31,6 +31,7 @@ class MainWindow(QMainWindow):
         self.config = EasyConfig(editable=True)
 
         root = self.config.root()
+        self.list = root.addList("list", pretty="List", type="file")
         self.info = root.addSubSection("info", pretty="Information")
         self.name = self.info.getString("name", pretty="Name", default="John")
         surname = self.info.addString("surname", pretty="Surname", default="Doe", editable=False, save=False)
