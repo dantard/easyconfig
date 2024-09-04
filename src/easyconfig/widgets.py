@@ -164,7 +164,7 @@ class List(InteractorWidget):
         super().__init__(elem)
         self.value_type = elem.kwargs.get("type", "str")
 
-    def ask_value(self):
+    def ask_value(self): # retry submit
         default = self.widget.currentItem().text() if self.widget.currentItem() is not None else ""
         if self.value_type == "str":
             default = str(default) if default is not None else ""
