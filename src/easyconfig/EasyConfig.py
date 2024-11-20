@@ -7,6 +7,7 @@ from PyQt5.QtWidgets import (
     QDialog
 )
 
+from easyconfig.callbacks import Callback
 from easyconfig.config_widget import ConfigWidget
 from easyconfig.dialog import Dialog
 from easyconfig.elem import Elem
@@ -23,6 +24,9 @@ class EasyConfig:
         self.reserved = "main"
         self.expanded = None
         self.widget = None
+
+    def set_callback_enabled(self, enabled):
+        Callback.callback_enabled = enabled
 
     def root(self):
         return self.root_node

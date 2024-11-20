@@ -206,8 +206,9 @@ class List(InteractorWidget):
 
     def add_widget(self, value):
         helper = QWidget()
+        helper.setContentsMargins(0, 0, 0, 0)
         layout = QVBoxLayout()
-        layout.setSpacing(0)
+        layout.setContentsMargins(0, 0, 0, 0)
 
         helper.setLayout(layout)
         button_add = QPushButton("+")
@@ -232,7 +233,9 @@ class List(InteractorWidget):
 
         self.widget = QListWidget()
         layout.addWidget(self.widget)
-        layout.addLayout(h_layout)
+
+        if self.kwargs.get("editable", True):
+            layout.addLayout(h_layout)
 
         self.widget.addItems([str(v) for v in value] if value is not None else [])
         self.layout.addWidget(helper)

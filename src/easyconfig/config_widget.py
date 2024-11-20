@@ -69,6 +69,7 @@ class ConfigWidget(QWidget):
             w = String(elem)
 
         if w is not None:
+            elem.set_widget(w)
             w.value_changed.connect(lambda: elem.update_value(w.get_value()))
             child = QTreeWidgetItem()
             child.setText(0, elem.get_pretty())

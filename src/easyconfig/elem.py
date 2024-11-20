@@ -1,9 +1,13 @@
 from PyQt5.QtCore import QObject, pyqtSignal
 
+from easyconfig.callbacks import Callback
 from easyconfig.kind import Kind
 
 
 class Elem(QObject):
+
+    callbacks_enabled = False
+
     class Wrapper:
         def __init__(self, **kwargs):
             self.elem = kwargs
@@ -23,6 +27,13 @@ class Elem(QObject):
         self.child = []
         self.parent = parent
         self.node = None
+        self.widget = None
+
+    def set_widget(self, widget):
+        self.widget = widget
+
+    def get_widget(self):
+        return self.widget
 
     def set_default_params(self, params_dict, append=None, remove=None):
         self.default_params = params_dict.copy()
@@ -278,8 +289,12 @@ class Elem(QObject):
         self.value = value
         # print("Update value", self.key, value)
         callback = self.kwargs.get("callback")
-        if callback is not None:
+        if Callback.callbacks_enabled and callback is not None:
             callback(self.key, self.value)
+
+    def update(self, **kwargs):
+        if self.widget is not None:
+            self.widget.update(**kwargs)
 
     def getDictionary(self, dic):
         if self.kind == Kind.ROOT:
@@ -409,3 +424,7 @@ class Elem(QObject):
 
     def get_param(self, key, default=None):
         return self.kwargs.get(key, default)
+
+    def set_visible(self, visible):
+        if self.widget is not None:
+            self.widget.setVisible(visible)
