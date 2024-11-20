@@ -34,7 +34,7 @@ class ConfigWidget(QWidget):
         val.reverse()
         traver(self.list.invisibleRootItem(), val)
 
-    def create_widget(self, elem, list, node):
+    def create_widget(self, elem, tree, node):
         parent = node
         if elem.kind == Kind.INT:
             w = Integer(elem)
@@ -72,9 +72,10 @@ class ConfigWidget(QWidget):
             elem.set_widget(w)
             w.value_changed.connect(lambda: elem.update_value(w.get_value()))
             child = QTreeWidgetItem()
-            child.setText(0, elem.get_pretty())
+            elem.tree_view_item = child
             parent.addChild(child)
-            list.setItemWidget(child, 1, w)
+            child.setText(0, elem.get_pretty())
+            tree.setItemWidget(child, 1, w)
             self.widgets.append(w)
 
     def fill_tree_widget(self, elem, tree, node=None):
@@ -83,6 +84,7 @@ class ConfigWidget(QWidget):
         elif elem.kind == Kind.SUBSECTION:
             if not elem.hidden:
                 qtw = QTreeWidgetItem()
+                elem.tree_view_item = qtw
                 node.addChild(qtw)
                 label = QLabel(elem.get_pretty())
                 label.setContentsMargins(2, 2, 2, 2)

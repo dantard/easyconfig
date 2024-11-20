@@ -133,6 +133,12 @@ class String(InteractorWidget):
     def get_name(self):
         return self.name
 
+    def update(self, **kwargs) -> None:
+        text = kwargs.get("text")
+        if text is not None:
+            self.widget.setText(text)
+            self.value_changed.emit()
+
 
 class DoubleLabel(InteractorWidget):
 
@@ -348,6 +354,11 @@ class ComboBox(InteractorWidget):
         color = kwargs.get("color")
         if color is not None:
             self.widget.setStyleSheet("QComboBox { color: %s }" % color)
+
+        text = kwargs.get("text")
+        if text is not None:
+            self.widget.setCurrentText(text)
+            self.value_changed.emit()
 
     def get_valid(self):
         return self.get_common().union(["items"])

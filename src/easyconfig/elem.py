@@ -17,6 +17,7 @@ class Elem(QObject):
 
     def __init__(self, key, kind, parent=None, **kwargs):
         super().__init__()
+        self.tree_view_item = None
         self.kind = kind
         self.kwargs = kwargs
         self.save = kwargs.get("save", True)
@@ -57,8 +58,8 @@ class Elem(QObject):
         if self.value != value:
             self.value = value
             self.value_changed.emit()
-            if self.kwargs.get("callback", None) and Callback.callbacks_enabled:
-                self.kwargs["callback"](self.key, value)
+            # TOCHECK if self.kwargs.get("callback", None) and Callback.callbacks_enabled:
+            #     self.kwargs["callback"](self.key, value)
 
     def add(self, key, kind=Kind.STR, **kwargs):
 
@@ -428,5 +429,5 @@ class Elem(QObject):
         return self.kwargs.get(key, default)
 
     def set_visible(self, visible):
-        if self.widget is not None:
-            self.widget.setVisible(visible)
+        if self.tree_view_item is not None:
+            self.tree_view_item.setHidden(not visible)
