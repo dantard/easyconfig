@@ -6,7 +6,7 @@ from easyconfig.kind import Kind
 
 class Elem(QObject):
 
-    callbacks_enabled = False
+    callbacks_enabled = True
 
     class Wrapper:
         def __init__(self, **kwargs):
@@ -54,8 +54,11 @@ class Elem(QObject):
         self.param_changed.emit(kwargs)
 
     def set_value(self, value, emit=True):
-        self.value = value
-        self.value_changed.emit()
+        if self.value != value:
+            self.value = value
+            self.value_changed.emit()
+            if self.kwargs.get("callback", None) and Callback.callbacks_enabled:
+                self.kwargs["callback"](self.key, value)
 
     def add(self, key, kind=Kind.STR, **kwargs):
 
@@ -287,7 +290,6 @@ class Elem(QObject):
 
     def update_value(self, value):
         self.value = value
-        # print("Update value", self.key, value)
         callback = self.kwargs.get("callback")
         if Callback.callbacks_enabled and callback is not None:
             callback(self.key, self.value)
@@ -325,12 +327,12 @@ class Elem(QObject):
         else:
             for k in keys:
                 dic = dic.get(k)
-
                 if dic is None:
                     break
 
             if dic is not None:
-                self.value = dic.get(self.key, self.value)
+                #self.value =
+                self.set_value(dic.get(self.key, self.value))
                 # print("setting", self.key, self.value)
 
     '''

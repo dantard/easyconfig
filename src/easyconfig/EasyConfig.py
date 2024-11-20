@@ -111,6 +111,8 @@ class EasyConfig:
                 # self.add_dynamic_fields(config)
                 if node is None:
                     node = self.root_node
+                Callback.callbacks_enabled = False
                 node.load(config)
+                Callback.callbacks_enabled = True
         except Exception as e:
             print("Config file not found or corrupted")

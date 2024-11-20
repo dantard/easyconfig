@@ -254,7 +254,9 @@ class List(InteractorWidget):
 
     def set_value(self, value):
         self.widget.clear()
-        self.widget.addItems(value)
+        if value is not None:
+            self.widget.addItems(value)
+
 
     def update(self, **kwargs) -> None:
         # print("List update", kwargs)

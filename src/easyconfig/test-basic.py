@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 import sys
 
+import yaml
+from PyQt5.QtCore import QTimer
 from PyQt5.QtWidgets import QPushButton, QApplication, QMainWindow, QWidget, QVBoxLayout, QMessageBox
 
 from EasyConfig import EasyConfig
@@ -24,9 +26,14 @@ class MainWindow(QMainWindow):
         save_btn = QPushButton("Save")
         self.v_layout.addWidget(save_btn)
 
+        update_btn = QPushButton("Update")
+        self.v_layout.addWidget(update_btn)
+
         show_btn.clicked.connect(self.show_info)
         save_btn.clicked.connect(self.save)
         name_btn.clicked.connect(self.get_name)
+        #update_btn.clicked.connect(self.update)
+        QTimer.singleShot(5000, self.update)
 
         self.config = EasyConfig(editable=True)
 
@@ -35,7 +42,7 @@ class MainWindow(QMainWindow):
         self.info = root.addSubSection("info", pretty="Information")
         self.name = self.info.getString("name", pretty="Name", default="John")
         surname = self.info.addString("surname", pretty="Surname", default="Doe", editable=False, save=False)
-        self.age = self.info.addInt("age", pretty="Age", default=30)
+        self.age = self.info.addInt("age", pretty="Age", default=30, callback=lambda x, y: print(x, y))
         self.cb = self.info.addCheckbox("married", pretty="Married", default=False)
         secret = self.info.addString("account", default="bvghfhfgh", hidden=True)
 
@@ -60,6 +67,13 @@ class MainWindow(QMainWindow):
         QMessageBox.information(self, "Name",
                                 "The name can be obtained this way: " + self.name.get_value() + " or this way: " + self.info.get("name") +
                                 " or this way: " + self.config.root().get("info/name"))
+
+
+    def update(self):
+        print("updating")
+        # with open("other_file.yaml", "r") as f:
+        #     config = yaml.safe_load(f)
+        #     self.config.root().load(config)
 
 
 if __name__ == "__main__":
