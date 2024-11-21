@@ -71,6 +71,7 @@ class MainWindow(QMainWindow):
 
     def update(self):
         print("updating")
+        self.age.set_value(40)
         # with open("other_file.yaml", "r") as f:
         #     config = yaml.safe_load(f)
         #     self.config.root().load(config)

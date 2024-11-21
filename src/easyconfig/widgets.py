@@ -24,8 +24,8 @@ class InteractorWidget(QWidget):
         super().__init__(None)
         self.elem = elem
         self.kwargs = elem.kwargs
-        self.elem.value_changed.connect(self.value_changed_external)
-        self.elem.param_changed.connect(self.param_changed_external)
+        self.elem.elem_value_changed.connect(self.value_changed_external)
+        self.elem.elem_param_changed.connect(self.param_changed_external)
 
         if not self.check_kwargs():
             sys.exit(0)
@@ -58,6 +58,9 @@ class InteractorWidget(QWidget):
 
     def set_emit_callback(self, value):
         self.emit_cb = value
+
+    def block_signals(self, b):
+        self.widget.blockSignals(b)
 
     def update(self, **kwargs) -> None:
         pass

@@ -12,8 +12,8 @@ class Elem(QObject):
         def __init__(self, **kwargs):
             self.elem = kwargs
 
-    value_changed = pyqtSignal()
-    param_changed = pyqtSignal(dict)
+    elem_value_changed = pyqtSignal()
+    elem_param_changed = pyqtSignal(dict)
 
     def __init__(self, key, kind, parent=None, **kwargs):
         super().__init__()
@@ -57,9 +57,14 @@ class Elem(QObject):
     def set_value(self, value, emit=True):
         if self.value != value:
             self.value = value
-            self.value_changed.emit()
-            # TOCHECK if self.kwargs.get("callback", None) and Callback.callbacks_enabled:
-            #     self.kwargs["callback"](self.key, value)
+            self.elem_value_changed.emit()
+            if self.kwargs.get("callback", None) and Callback.callbacks_enabled:
+                self.kwargs["callback"](self.key, value)
+
+    def block_widget_signals(self, block):
+        if self.widget is not None:
+            self.widget.block_signals(block)
+
 
     def add(self, key, kind=Kind.STR, **kwargs):
 
@@ -314,17 +319,17 @@ class Elem(QObject):
             if self.save:
                 dic[self.key] = self.value
 
-    def load(self, dic, keys=None):
+    def load(self, dic, keys=None, callbacks=False):
         if self.kind == Kind.ROOT:
             keys = []
             for c in self.child:
-                c.load(dic, keys.copy())
+                c.load(dic, keys.copy(), callbacks)
         elif self.kind == Kind.SUBSECTION:
             if keys is None:
                 keys = []
             keys.append(self.key)
             for c in self.child:
-                c.load(dic, keys.copy())
+                c.load(dic, keys.copy(), callbacks)
         else:
             for k in keys:
                 dic = dic.get(k)
@@ -332,9 +337,10 @@ class Elem(QObject):
                     break
 
             if dic is not None:
-                #self.value =
+                Callback.callbacks_enabled = callbacks
                 self.set_value(dic.get(self.key, self.value))
-                # print("setting", self.key, self.value)
+                Callback.callbacks_enabled = True
+
 
     '''
     def get_children(self, key):
@@ -431,3 +437,7 @@ class Elem(QObject):
     def set_visible(self, visible):
         if self.tree_view_item is not None:
             self.tree_view_item.setHidden(not visible)
+
+    def callback(self):
+        if self.kwargs.get("callback", None) and Callback.callbacks_enabled:
+            self.kwargs["callback"](self.key, self.value)

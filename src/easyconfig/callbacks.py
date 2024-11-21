@@ -1,2 +1,2 @@
 class Callback:
-    callback_enabled = True
+    callbacks_enabled = True

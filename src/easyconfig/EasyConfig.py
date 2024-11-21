@@ -103,7 +103,7 @@ class EasyConfig:
         with open(filename, "w") as f:
             yaml.dump(tree, f, sort_keys=False)
 
-    def load(self, filename, node=None):
+    def load(self, filename, node=None, callbacks=False):
         try:
             with open(filename, "r") as f:
                 config = yaml.safe_load(f)
@@ -111,8 +111,6 @@ class EasyConfig:
                 # self.add_dynamic_fields(config)
                 if node is None:
                     node = self.root_node
-                Callback.callbacks_enabled = False
-                node.load(config)
-                Callback.callbacks_enabled = True
+                node.load(config, callbacks=callbacks)
         except Exception as e:
             print("Config file not found or corrupted")
