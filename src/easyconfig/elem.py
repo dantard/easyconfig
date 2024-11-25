@@ -270,7 +270,10 @@ class Elem(QObject):
         elem = Elem(key, Kind.SUBSECTION, self, **kwargs)
         elem.set_default_params(self.default_params, kwargs)
 
+
+
         self.addChild(elem)
+        elem.addInt("+hidden", default=0, hidden=True, save=False)
         return elem
 
     def getSubSection(self, key, create=True, **kwargs):
@@ -319,6 +322,29 @@ class Elem(QObject):
             if self.save:
                 dic[self.key] = self.value
 
+    # def load(self, dic, keys=None, callbacks=False):
+    #     def traverse_dict(d):
+    #         if isinstance(d, dict):
+    #             keys = list(d.keys())
+    #             for k in keys:
+    #                 if k.endswith("@"):
+    #                     value = d.pop(k)
+    #                     k = k.replace("@", "")
+    #                     d[k] = value
+    #                     d[k]["@hidden"] = True
+    #             for key, value in d.items():
+    #                 traverse_dict(value)
+    #         elif isinstance(d, list):
+    #             for item in d:
+    #                 traverse_dict(item)
+    #
+    #     traverse_dict(dic)
+    #     print("aaa", dic)
+    #     self.load_easy(dic, keys, callbacks)
+
+    def __repr__(self):
+        return "{},{}".format(self.key, self.value)
+
     def load(self, dic, keys=None, callbacks=False):
         if self.kind == Kind.ROOT:
             keys = []
@@ -328,8 +354,15 @@ class Elem(QObject):
             if keys is None:
                 keys = []
             keys.append(self.key)
+
             for c in self.child:
-                c.load(dic, keys.copy(), callbacks)
+               c.load(dic, keys.copy(), callbacks)
+
+               # If there is a field +hidden
+               # and is true hide the field
+               if c.key == "+hidden":
+                   self.hidden = self.hidden or c.value
+
         else:
             for k in keys:
                 dic = dic.get(k)
@@ -338,7 +371,24 @@ class Elem(QObject):
 
             if dic is not None:
                 Callback.callbacks_enabled = callbacks
-                self.set_value(dic.get(self.key, self.value))
+                dict_value = dic.get(self.key, self.value)
+
+                # NEW: MANAGE parameters for field
+                # They must start with a '+' and are
+                # value, hidden, save and addtionally
+                # all those valid for the widget itself
+
+                if type(dict_value) is dict and any([a.startswith('+') for a in dict_value.keys()]):
+                    value = dict_value.pop("+value")
+                    self.hidden = dict_value.pop("+hidden", False)
+                    self.save = dict_value.pop("+save", True)
+                    clean_dict = {key.lstrip('+'): value for key, value in dict_value.items()}
+                    self.kwargs.update(clean_dict)
+                else:
+                    # OLD basic case
+                    value = dict_value
+
+                self.set_value(value)
                 Callback.callbacks_enabled = True
 
 

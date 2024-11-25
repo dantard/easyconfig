@@ -47,7 +47,6 @@ class MainWindow(QMainWindow):
         secret = self.info.addString("account", default="bvghfhfgh", hidden=True)
 
         self.work = root.getSubSection("job", pretty="Job")
-
         self.slider = self.work.addSlider("salary", pretty="Salary (K)", default=500, min=0, max=1000, den=10, fmt="{:.0f}", callback=lambda x, y: print(x, y))
         self.combo_box = self.work.addCombobox("position", pretty="Position", default=1, items=["Manager", "Employee", "Owner"])
 
