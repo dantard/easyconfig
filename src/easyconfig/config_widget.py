@@ -78,9 +78,11 @@ class ConfigWidget(QWidget):
             tree.setItemWidget(child, 1, w)
             self.widgets.append(w)
 
-    def fill_tree_widget(self, elem, tree, node=None):
+    def fill_tree_widget(self, elem, tree, node=None, skip_heading_subsection=False):
         if elem.kind == Kind.ROOT:
             node = tree.invisibleRootItem()
+        elif skip_heading_subsection:
+            pass
         elif elem.kind == Kind.SUBSECTION:
             if not elem.hidden:
                 qtw = QTreeWidgetItem()
@@ -89,6 +91,12 @@ class ConfigWidget(QWidget):
                 label = QLabel(elem.get_pretty())
                 label.setContentsMargins(2, 2, 2, 2)
                 tree.setItemWidget(qtw, 0, label)
+
+                # Workaround to make the resizing work
+                # (it doesn't work if the label is the only widget)
+                qtw.setText(0, elem.get_pretty())
+                qtw.setForeground(0, Qt.transparent)
+
                 node = qtw
         elif not elem.hidden and not elem.parent.hidden:
             self.create_widget(elem, tree, node)
@@ -100,7 +108,7 @@ class ConfigWidget(QWidget):
         for w in self.widgets:
             w.elem.value = w.get_value()
 
-    def __init__(self, node):
+    def __init__(self, node, skip_heading_subsection=False):
         super().__init__(None)
         self.setWindowTitle("EasyConfig")
         layout = QVBoxLayout(self)
@@ -120,7 +128,7 @@ class ConfigWidget(QWidget):
         scroll.setWidgetResizable(True)
 
         layout.addWidget(scroll)
-        self.fill_tree_widget(node, self.list, self.list.invisibleRootItem())
+        self.fill_tree_widget(node, self.list, self.list.invisibleRootItem(), skip_heading_subsection=skip_heading_subsection)
         self.list.expanded.connect(lambda: self.list.resizeColumnToContents(0))
         # self.list.expand()
         proxy = self.list.model()

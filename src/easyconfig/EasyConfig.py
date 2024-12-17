@@ -31,8 +31,9 @@ class EasyConfig:
     def root(self):
         return self.root_node
 
-    def get_widget(self):
-        self.widget = ConfigWidget(self.root_node)
+    def get_widget(self, node=None, skip_heading_subsection=False):
+        node = node or self.root_node
+        self.widget = ConfigWidget(node, skip_heading_subsection)
         if self.expanded:
             self.widget.set_expanded(self.expanded)
         return self.widget
