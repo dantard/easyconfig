@@ -32,7 +32,7 @@ class MainWindow(QMainWindow):
         show_btn.clicked.connect(self.show_info)
         save_btn.clicked.connect(self.save)
         name_btn.clicked.connect(self.get_name)
-        #update_btn.clicked.connect(self.update)
+        update_btn.clicked.connect(self.update)
         QTimer.singleShot(5000, self.update)
 
         self.config = EasyConfig(editable=True)

@@ -29,6 +29,7 @@ class Elem(QObject):
         self.parent = parent
         self.node = None
         self.widget = None
+        self.dict_way = False
 
     def set_widget(self, widget):
         self.widget = widget
@@ -320,7 +321,11 @@ class Elem(QObject):
                     c.getDictionary(dic)
         else:
             if self.save:
-                dic[self.key] = self.value
+                if not self.dict_way:
+                    dic[self.key] = self.value
+                else:
+                    dic[self.key] = {"+value": self.value, "+hidden": self.hidden, "+save": self.save}
+
 
     # def load(self, dic, keys=None, callbacks=False):
     #     def traverse_dict(d):
@@ -362,7 +367,7 @@ class Elem(QObject):
                # and is true hide the field
                if c.key == "+hidden":
                    self.hidden = self.hidden or c.value
-
+                   self.set_visible(not self.hidden)
         else:
             for k in keys:
                 dic = dic.get(k)
@@ -381,9 +386,11 @@ class Elem(QObject):
                 if type(dict_value) is dict and any([a.startswith('+') for a in dict_value.keys()]):
                     value = dict_value.pop("+value")
                     self.hidden = dict_value.pop("+hidden", False)
+                    self.set_visible(not self.hidden)
                     self.save = dict_value.pop("+save", True)
                     clean_dict = {key.lstrip('+'): value for key, value in dict_value.items()}
                     self.kwargs.update(clean_dict)
+                    self.dict_way = True
                 else:
                     # OLD basic case
                     value = dict_value
